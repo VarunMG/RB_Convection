@@ -638,7 +638,7 @@ def optimization(problem,guess,T,tol,max_iters,write):
     problem.u.load_from_global_grid_data(uStead)
     problem.b.load_from_global_grid_data(bStead)
     problem.p.load_from_global_grid_data(pStead)
-    return iters-1
+    return iters
 
     
     
@@ -730,11 +730,13 @@ def test_array_manipulations():
 def test_optimization():
     Nx = 128
     Nz = 64
-    testProb = RBC_Problem(2000,100,2,Nx,Nz,'RB1')
+    testProb = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
     testProb.initialize()
-    guess = np.zeros(4*Nx*Nz)
+    uArr,bArr,pArr,dt = open_fields("test_files/Ra5000Pr100alpha1.5585Nx128Nz64T1000.npy")
+    guess = arrsToStateVec(uArr, bArr, pArr)
     iters = optimization(testProb,guess,2,1e-3,10,True)
-    print(iters)
+    testProb.plot()
+    print(np.max(abs(testProb.u.allgather_data()-uArr)))
 
 ###################################
 ### run every test successively ###
