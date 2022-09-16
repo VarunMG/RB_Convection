@@ -595,6 +595,48 @@ def Gt(X,T,problem):
     Gt_Vec = (Gt_Vec - X)/T
     return Gt_Vec
     
+def jac_approx(X,dX,F,T,problem):
+    #mach_eps = np.finfo(float).eps
+    #normX = np.linalg.norm(X)
+    #normdX = np.linalg.norm(dX)
+    #dotprod = np.dot(X,dX)
+    #eps = (np.sqrt(mach_eps)/(normdX**2))*max(dotprod,normdX)
+    eps = 1e-3
+    return (Gt(X+eps*dX,T,problem).T + F.T)/eps
+
+
+def optimization(problem,guess,T,tol,max_iters,write):
+    #problem is an RBC_problem
+    #guess is a guess for the state vec
+    #T is time we are integrating out to
+    #tol is tolerance for Newton method 
+    #max_iters is max Newton iterations that will be done
+    err = 1e10
+    iters = 0
+
+    Nx = problem.Nx
+    Nz = problem.Nz
+
+    X = guess
+    while err > tol and iters < max_iters:
+        if write == 'y':
+            print("iter: ",iters)
+            print(X)
+            print("-------------")
+
+        F = -1*Gt(X,T,problem)
+        A = lambda dX : jac_approx(X,dX,F,T,problem)
+        A_mat = LinearOperator((4*Nx*Nz,4*Nx*Nz),A)
+        delta_X,code =gmres(A_mat,F)
+        if code != 0:
+            raise("gmres did not converge")
+        X= X+delta_X
+        iters += 1
+        err = np.linalg.norm(Gt(X,T,problem))
+    return X,iters-1
+
+    
+    
 
 #######################################
 ### testing the array manipulations ###
@@ -675,6 +717,19 @@ def test_array_manipulations():
     print("manipulation test 2 passed")
     print("-------------")
 
+############################
+### Optimization Testing ###
+############################
+
+def test_optimization():
+    Nx = 128
+    Nz = 64
+    testProb = RBC_Problem(2000,100,2,Nx,Nz,'RB1')
+    testProb.initialize()
+    guess = np.zeros((4*Nx*Nz,1))
+    steady,iters = optimization(testProb,guess,2,1e-3,10,True)
+    print(steady)
+
 ###################################
 ### run every test successively ###
 ###################################
@@ -692,10 +747,10 @@ def test_all():
 
     print("wow congrats you actually passed everything for once buddy")
 
-test_all()
+#test_all()
 #test_rbc()
 #test_Gt()
 #test_array_manipulations()      
 #testing_functions()        
-        
+test_optimization()
         
