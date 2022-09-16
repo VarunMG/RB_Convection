@@ -508,7 +508,24 @@ def rbc_test():
     assert(np.allclose(test_problem5.p['g'].all(),pTest2.all(),atol=1e-12))
     
     print("test 5 passed")
+    print("-------------")
+
+    ##############
+    ### TEST 6 ###
+    ##############
+
+    print("Loading From File Test. Ra=80000, Pr = 100")
     
+    test_problem6 = RBC_Problem(80000,100,2,128,64,'RB1',dt1,uTest1,bTest1,pTest1)
+    test_problem6.initialize()
+    test_problem6.solve_system(20,True)
+
+    assert(np.allclose(test_problem6.u['g'].all(),uTest2.all(),atol=1e-12))
+    assert(np.allclose(test_problem6.b['g'].all(),bTest2.all(),atol=1e-12))
+    assert(np.allclose(test_problem6.p['g'].all(),pTest2.all(),atol=1e-12))
+
+    print("test 6 passed")
+    print("-------------") 
 
 #########################
 ### optimization part ###
@@ -521,10 +538,10 @@ def probToStateVec(RBCProb):
     RBCProb.u.change_scales(1)
     RBCProb.b.change_scales(1)
     RBCProb.p.change_scales(1)
-    uArr = RBCProb.u['g']
-    bArr = RBCProb.b['g']
-    pArr = RBCProb.p['g']
-    
+    uArr = RBCProb.u.allgather_data('g')
+    bArr = RBCProb.b.allgather_data('g')
+    pArr = RBCProb.p.allgather_data('g')
+
     X = np.zeros(4*Nx*Nz)
     uArr1 = uArr[0,:,:].flatten()
     uArr2 = uArr[1,:,:].flatten()
@@ -605,13 +622,23 @@ def test_Gt():
         pFinal1 = np.load(testFinal)
         dtFinal1 = np.load(testFinal)
     
-    assert(np.allclose(u_T,uFinal1))
-    assert(np.allclose(b_T,bFinal1))
-    assert(np.allclose(p_T,pFinal1))
+    assert(np.allclose(u_T,uFinal1,atol=1e-12))
+    assert(np.allclose(b_T,bFinal1,atol=1e-12))
+    assert(np.allclose(p_T,pFinal1,atol=1e-12))
     
     print('test 1 passed')
     print("-------------")
-    
+
+
+def testing_allgather_data():
+    uTest1,bTest1,pTest1,dt1 = open_fields('test_files/Ra80000Pr100alpha2Nx128Nz64T100.npy')
+    testProb = RBC_Problem(80000,100,2,128,64,'RB1',dt1,uTest1,bTest1,pTest1)
+    testProb.initialize()
+    testProb.u.change_scales(1)
+    uStuff = testProb.u.allgather_data('g')
+    assert(np.allclose(uStuff,uTest1,atol=1e-12))
+    print("test passed!")
+
 
 def test_array_manipulations():
     with open('test_files/Ra80000Pr100alpha2Nx128Nz64T100.npy','rb') as testFile1:
@@ -636,9 +663,9 @@ def test_array_manipulations():
     test_problem1.b.change_scales(1)
     test_problem1.p.change_scales(1)
     
-    uTest2 = test_problem1.u['g']
-    bTest2 = test_problem1.b['g']
-    pTest2 = test_problem1.p['g']
+    uTest2 = test_problem1.u.allgather_data('g')
+    bTest2 = test_problem1.b.allgather_data('g')
+    pTest2 = test_problem1.p.allgather_data('g')
     
     X2 = probToStateVec(test_problem1)
     uArr2,bArr2,pArr2 = stateToArrs(X2,Nx,Nz)
@@ -663,8 +690,12 @@ def test_all():
     print("passed Gt Test")
     print("-------------")
 
+    print("wow congrats you actually passed everything for once buddy")
 
-        
-        
+test_all()
+#test_rbc()
+#test_Gt()
+#test_array_manipulations()      
+#testing_functions()        
         
         
