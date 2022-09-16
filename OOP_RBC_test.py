@@ -620,9 +620,10 @@ def optimization(problem,guess,T,tol,max_iters,write):
     X = guess
     while err > tol and iters < max_iters:
         if write == 'y':
-            print("iter: ",iters)
-            print(X)
-            print("-------------")
+            #print("iter: ",iters)
+            #print(X)
+            #print("-------------")
+            pass
 
         F = -1*Gt(X,T,problem)
         A = lambda dX : jac_approx(X,dX,F,T,problem)
@@ -633,7 +634,11 @@ def optimization(problem,guess,T,tol,max_iters,write):
         X= X+delta_X
         iters += 1
         err = np.linalg.norm(Gt(X,T,problem))
-    return X,iters-1
+    uStead,bStead,pStead = stateToArrs(X,Nx,Nz)
+    problem.u.load_from_global_grid_data(uStead)
+    problem.b.load_from_global_grid_data(bStead)
+    problem.p.load_from_global_grid_data(pStead)
+    return iters-1
 
     
     
@@ -655,6 +660,7 @@ def test_Gt():
     X = arrsToStateVec(uTest1, bTest1, pTest1)
     T = 20
     Gt_Vec = Gt(X,T,test_problem1)
+    print(Gt_Vec.shape)
     state_T = Gt_Vec*T + X
     u_T,b_T,p_T = stateToArrs(state_T, Nx, Nz)
     
@@ -726,9 +732,9 @@ def test_optimization():
     Nz = 64
     testProb = RBC_Problem(2000,100,2,Nx,Nz,'RB1')
     testProb.initialize()
-    guess = np.zeros((4*Nx*Nz,1))
-    steady,iters = optimization(testProb,guess,2,1e-3,10,True)
-    print(steady)
+    guess = np.zeros(4*Nx*Nz)
+    iters = optimization(testProb,guess,2,1e-3,10,True)
+    print(iters)
 
 ###################################
 ### run every test successively ###
