@@ -162,6 +162,8 @@ class RBC_Problem:
             
         
         # Substitutions
+        Ra = self.Ra
+        Pr = self.Pr
         kappa = 4*(self.Ra * self.Pr)**(-1/2)
         nu = 4*(self.Ra / self.Pr)**(-1/2)
         self.x, self.z = self.dist.local_grids(self.xbasis, self.zbasis)
@@ -183,6 +185,8 @@ class RBC_Problem:
             self.problem.add_equation("b(z=1) = -1")
             self.problem.add_equation("u(z=1) = 0")
         if self.bcs == 'IH1':
+            Ra = self.Ra
+            Pr = self.Pr
             self.problem.add_equation("trace(grad_u) + tau_p = 0")
             self.problem.add_equation("dt(b) - div(grad_b) + lift(tau_b2) = - dot(u,grad(b))+1")
             self.problem.add_equation("dt(u) - Pr*div(grad_u) + grad(p) - Pr*Ra*b*ez + lift(tau_u2) = - dot(u,grad(u))")
@@ -735,7 +739,9 @@ def test_optimization():
     uArr,bArr,pArr,dt = open_fields("test_files/Ra5000Pr100alpha1.5585Nx128Nz64T1000.npy")
     guess = arrsToStateVec(uArr, bArr, pArr)
     iters = optimization(testProb,guess,2,1e-3,10,True)
-    testProb.plot()
+    print(iters)
+    #testProb.plot()
+    testProb.saveToFile('opti_output_remote/opti_test1')
     print(np.max(abs(testProb.u.allgather_data()-uArr)))
 
 ###################################
@@ -760,5 +766,9 @@ def test_all():
 #test_Gt()
 #test_array_manipulations()      
 #testing_functions()        
-test_optimization()
-        
+#test_optimization()
+
+IH_test = RBC_Problem(5000,100,1.5585,1024,512,'IH1')
+IH_test.initialize()
+IH_test.solve_system(0.01)
+IH_test.saveToFile('IH_output/Ra5000Pr100alpha1.5585Nx1024Nz512')
