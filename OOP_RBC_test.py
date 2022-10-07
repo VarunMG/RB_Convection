@@ -766,9 +766,5 @@ def test_all():
 #test_Gt()
 #test_array_manipulations()      
 #testing_functions()        
-#test_optimization()
+test_optimization()
 
-IH_test = RBC_Problem(5000,100,1.5585,1024,512,'IH1')
-IH_test.initialize()
-IH_test.solve_system(0.01)
-IH_test.saveToFile('IH_output/Ra5000Pr100alpha1.5585Nx1024Nz512')
