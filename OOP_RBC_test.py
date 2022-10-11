@@ -40,94 +40,7 @@ class RBC_Problem:
         
         self.volume = ((2*np.pi)/alpha)*2
         
-        # ##making Bases
-        # self.coords = d3.CartesianCoordinates('x','z')
-        # self.dist = d3.Distributor(self.coords, dtype=dtype)
-        # self.xbasis = d3.RealFourier(self.coords['x'], size=Nx, bounds=(-1*np.pi/alpha, np.pi/alpha), dealias=dealias)
-        # self.zbasis = d3.ChebyshevT(self.coords['z'], size=Nz, bounds=(-1, 1), dealias=dealias)
-        
-        # ##making fields
-        # p = self.dist.Field(name='p', bases=(self.xbasis,self.zbasis))
-        # b = self.dist.Field(name='b', bases=(self.xbasis,self.zbasis))
-        # u = self.dist.VectorField(self.coords, name='u', bases=(self.xbasis,self.zbasis))
-        # tau_p = self.dist.Field(name='tau_p')
-        # tau_b1 = self.dist.Field(name='tau_b1', bases=self.xbasis)
-        # tau_b2 = self.dist.Field(name='tau_b2', bases=self.xbasis)
-        # tau_u1 = self.dist.VectorField(self.coords, name='tau_u1', bases=self.xbasis)
-        # tau_u2 = self.dist.VectorField(self.coords, name='tau_u2', bases=self.xbasis)
-        
-        # self.p = p
-        # self.b = b
-        # self.u = u
-        # self.tau_p = tau_p
-        # self.tau_b1 = tau_b1
-        # self.tau_b2 = tau_b2
-        # self.tau_u1 = tau_u1
-        # self.tau_u2 = tau_u2
-            
-        
-        # # Substitutions
-        # kappa = 4*(Ra * Pr)**(-1/2)
-        # nu = 4*(Ra / Pr)**(-1/2)
-        # self.x, self.z = self.dist.local_grids(self.xbasis, self.zbasis)
-        # ex, ez = self.coords.unit_vector_fields(self.dist)
-        # lift_basis = self.zbasis.clone_with(a=1/2, b=1/2) # First derivative basis
-        # lift = lambda A: d3.Lift(A, lift_basis, -1)
-        # grad_u = d3.grad(self.u) + ez*lift(self.tau_u1) # First-order reduction
-        # grad_b = d3.grad(self.b) + ez*lift(self.tau_b1) # First-order reduction
-        
-        # ##defining problem
-        # self.problem = d3.IVP([self.p, self.b, self.u, self.tau_p, self.tau_b1, self.tau_b2, self.tau_u1, self.tau_u2], namespace=locals())
-        
-        # if self.bcs == 'RB1':
-        #     self.problem.add_equation("trace(grad_u) + tau_p = 0")
-        #     self.problem.add_equation("dt(b) - kappa*div(grad_b) + lift(tau_b2) = - dot(u,grad(b))")
-        #     self.problem.add_equation("dt(u) - nu*div(grad_u) + grad(p) - b*ez + lift(tau_u2) = - dot(u,grad(u))")
-        #     self.problem.add_equation("b(z=-1) = 1")
-        #     self.problem.add_equation("u(z=-1) = 0")
-        #     self.problem.add_equation("b(z=1) = -1")
-        #     self.problem.add_equation("u(z=1) = 0")
-        # if self.bcs == 'IH1':
-        #     self.problem.add_equation("trace(grad_u) + tau_p = 0")
-        #     self.problem.add_equation("dt(b) - div(grad_b) + lift(tau_b2) = - dot(u,grad(b))+1")
-        #     self.problem.add_equation("dt(u) - Pr*div(grad_u) + grad(p) - Pr*Ra*b*ez + lift(tau_u2) = - dot(u,grad(u))")
-        #     self.problem.add_equation("b(z=-1) = 0")
-        #     self.problem.add_equation("b(z=1) = 0")
-        #     self.problem.add_equation("u(z=1) = 0")
-        #     self.problem.add_equation("u(z=-1) = 0")
-        # self.problem.add_equation("integ(p) = 0") # Pressure gauge
-        
-        # ##put in initial conditions if given
-        # if initial_u != None:
-        #     self.u['g'] = initial_u
-        
-        # if initial_b != None:
-        #     self.b['g'] = initial_b
-        
-        # #if no initial conditions given, use a perturbed conduction state
-        # if initial_u == None and initial_b == None:
-        #     self.b.fill_random('g', seed=42, distribution='normal', scale=1e-3) # Random noise
-        #     self.b['g'] *= (1+self.z) * (1 - self.z) # Damp noise at walls
-        #     self.b['g'] += self.conduction_state() # Add appropriate conduction state
-        #     self.init_u = np.copy(u['g'])
-        #     self.init_b = np.copy(b['g'])
-        
-        
-        # ##defining timestepper
-        # timestepper = d3.RK222
-        # self.solver = self.problem.build_solver(timestepper)
-        # if self.bcs == 'IH1':
-        #     max_timestep = 0.05
-        # else:
-        #     max_timestep = 0.125
-        
-        # # CFL
-        # self.CFL = d3.CFL(self.solver, initial_dt=max_timestep, cadence=10, safety=0.5, threshold=0.05,
-        #              max_change=1.5, min_change=0.5, max_dt=max_timestep)
-        # self.CFL.add_velocity(self.u)
-        
-        # self.flow = d3.GlobalFlowProperty(self.solver, cadence=10)
-        # self.flow.add_property(1 + d3.dot(self.b*self.u,ez)/kappa,name='Nu')
+
         
     def initialize(self):
         self.time = 0
@@ -246,8 +159,6 @@ class RBC_Problem:
             return (1+self.z)*(self.z-1)
         
     def reset(self):
-        #self.u.change_scales(1)
-        #self.b.change_scales(1)
         self.u.load_from_global_grid_data(self.init_u)
         self.b.load_from_global_grid_data(self.init_b)
         self.p.load_from_global_grid_data(self.init_p)
@@ -353,29 +264,6 @@ class RBC_Problem:
         self.time_step = dt
     
     def saveToFile(self,path=None):
-        # self.u.change_scales(1)
-        # self.b.change_scales(1)
-        # self.p.change_scales(1)
-        
-        # if path == None:
-        #     path = 'Outputs/Ra_' + str(self.Ra) + '/Pr_' + str(self.Pr)  +  '/' + 'alpha_' + str(self.alpha) + '/' + 'Nx_' + str(self.Nx) + '/' + 'Nz_' + str(self.Nz) + '/T_' + str(self.time) + '/'
-        # try:
-        #     os.makedirs(path)
-        # except FileExistsError:
-        #     pass
-        # uFile = path + 'u.npy'
-        # bFile = path + 'b.npy'
-        # pFile = path + 'p.npy' 
-        
-        # with open(uFile,'wb') as u_file:
-        #     np.save(u_file, self.u['g'])
-            
-        # with open(bFile,'wb') as b_file:
-        #     np.save(b_file, self.b['g'])
-        
-        # with open(pFile,'wb') as p_file:
-        #     np.save(p_file, self.p['g'])
-        
         self.u.change_scales(1)
         self.b.change_scales(1)
         self.p.change_scales(1)
