@@ -327,7 +327,7 @@ def rbc_test():
     test_problem1 = RBC_Problem(1000,1,1.5585,256,128,'RB1')
     test_problem1.initialize()
     test_problem1.solve_system(30,True)
-    test_problem1.plot()
+    #test_problem1.plot()
     assert(np.allclose(test_problem1.b['g'].all(),test_problem1.conduction_state().all(),atol=1e-12))
     print("test 1 passed")
     print("-------------")
@@ -733,5 +733,7 @@ def test_all():
 #test_Gt()
 #test_array_manipulations()      
 #testing_functions()        
-test1, test2, test3, uArr1, uArr2, uArr3 = steady_state_test()
+#test1, test2, test3, uArr1, uArr2, uArr3 = steady_state_test()
+test_all()
+
 
