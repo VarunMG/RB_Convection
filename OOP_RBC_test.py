@@ -768,7 +768,7 @@ def steady_state_test():
     test2.initialize()
     uArr2,bArr2,pArr2,dt2 = open_fields("test_files/optim_test/Ra5000Pr100alpha1.5585Nx128Nz64T500.npy")
     guess2 = arrsToStateVec(uArr2, bArr2, pArr2)
-    iters2 = steady_state_finder(test2,guess1,2,1e-3,10,True)
+    iters2 = steady_state_finder(test2,guess2,2,1e-3,10,True)
     logging.info("Number of iterations: %i", iters2)
 
 
@@ -789,7 +789,35 @@ def steady_state_test():
     logging.info("Error in b: %f",error2_b)
     logging.info("Error in p: %f",error2_p)
     logging.info("test 2 over \n ----------------------")
-    return test1, test2, uArr1, uArr2
+    
+    
+    logging.info("Test 3 Starting")
+    test3 = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
+    test3.initialize()
+    uArr3,bArr3,pArr3,dt3 = open_fields("test_files/optim_test/Ra5000Pr100alpha1.5585Nx128Nz64T200.npy")
+    guess3 = arrsToStateVec(uArr3, bArr3, pArr3)
+    iters3 = steady_state_finder(test3,guess3,2,1e-3,10,True)
+    logging.info("Number of iterations: %i", iters3)
+
+
+    test3.u.change_scales(1)
+    test3.b.change_scales(1)
+    test3.p.change_scales(1)
+    
+    steady3_u = test3.u.allgather_data('g')
+    steady3_b = test3.b.allgather_data('g')
+    steady3_p = test3.p.allgather_data('g')
+    
+    
+    error3_u = np.max(abs(steady3_u-uArr1))
+    error3_b = np.max(abs(steady3_b-bArr1))
+    error3_p = np.max(abs(steady3_p-pArr1))
+    
+    logging.info("Error in u: %f",error3_u)
+    logging.info("Error in b: %f",error3_b)
+    logging.info("Error in p: %f",error3_p)
+    logging.info("test 3 over \n ----------------------")
+    return test1, test2, test3, uArr1, uArr2, uArr3
     
     
 
@@ -807,7 +835,9 @@ def test_all():
     test_Gt()
     print("passed Gt Test")
     print("-------------")
-
+    steady_state_test()
+    print("passed steady state test")
+    print("-------------")
     print("wow congrats you actually passed everything for once buddy")
 
 #test_all()
@@ -815,5 +845,5 @@ def test_all():
 #test_Gt()
 #test_array_manipulations()      
 #testing_functions()        
-test1, test2, uArr1, uArr2 = steady_state_test()
+test1, test2, test3, uArr1, uArr2, uArr3 = steady_state_test()
 
