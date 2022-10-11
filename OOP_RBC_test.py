@@ -706,8 +706,20 @@ def steady_state_test():
     logging.info("Error in p: %f",error3_p)
     logging.info("test 3 over \n ----------------------")
     return test1, test2, test3, uArr1, uArr2, uArr3
-    
-    
+
+def sondak_test():
+    alphas = [2.6,2.8,3.0]
+    Nx = 128
+    Nz = 64
+    Ra = 80000
+    Pr = 100
+    uArr,bArr,pArr,dt = open_fields("test_files/optim_test/Ra5000Pr100alpha1.5585Nx128Nz64T200.npy")
+    guess = arrsToStateVec(uArr,bArr,pArr)
+    for alpha in alphas:
+        sim = RBC_Problem(Ra,Pr,alpha,Nx,Nz,'RB1')
+        sim.initialize()
+        iters = steady_state_finder(sim,guess,1,1e-3,10,False)
+
 
 ###################################
 ### run every test successively ###
@@ -734,6 +746,7 @@ def test_all():
 #test_array_manipulations()      
 #testing_functions()        
 #test1, test2, test3, uArr1, uArr2, uArr3 = steady_state_test()
-test_all()
+#test_all()
+sondak_test()
 
 
