@@ -609,7 +609,7 @@ def jac_approx(X,dX,F,T,problem):
     return (Gt(X+eps*dX,T,problem).T + F.T)/eps
 
 
-def optimization(problem,guess,T,tol,max_iters,write):
+def steady_state_finder(problem,guess,T,tol,max_iters,write):
     #problem is an RBC_problem
     #guess is a guess for the state vec
     #T is time we are integrating out to
@@ -731,50 +731,65 @@ def test_array_manipulations():
 ### Optimization Testing ###
 ############################
 
-def test_optimization():
+def steady_state_test():
     Nx = 128
     Nz = 64
-    #print("STARTING TEST 1")
-    logging.info('STARTING TEST 1')
-    testProb = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
-    testProb.initialize()
-    uArr,bArr,pArr,dt = open_fields("test_files/optim_test/Ra5000Pr100alpha1.5585Nx128Nz64T1000.npy")
-    guess = arrsToStateVec(uArr, bArr, pArr)
-    iters = optimization(testProb,guess,2,1e-3,10,True)
+    logging.info("Test 1 Starting")
+    test1 = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
+    test1.initialize()
+    uArr1,bArr1,pArr1,dt1 = open_fields("test_files/optim_test/Ra5000Pr100alpha1.5585Nx128Nz64T1000.npy")
+    guess1 = arrsToStateVec(uArr1, bArr1, pArr1)
+    iters1 = steady_state_finder(test1,guess1,2,1e-3,10,True)
+    logging.info("Number of iterations: %i", iters1)
+
+
+    test1.u.change_scales(1)
+    test1.b.change_scales(1)
+    test1.p.change_scales(1)
     
-    #print("Number of iterations:")
-    #print(iters)
-    logging.info('number of iterations: %i',iters)
-    #testProb.plot()
-    #testProb.saveToFile('opti_output_remote/opti_test1')
-    #print("Error:")
-    err1 = np.max(abs(testProb.u.allgather_data()-uArr))
-    #print(err1)
-    logging.info("error: %f",err1)
-    #assert(err1 < 1e-12)
-    #print("test 1 over")
+    steady1_u = test1.u.allgather_data('g')
+    steady1_b = test1.b.allgather_data('g')
+    steady1_p = test1.p.allgather_data('g')
+    
+    
+    error1_u = np.max(abs(steady1_u-uArr1))
+    error1_b = np.max(abs(steady1_b-bArr1))
+    error1_p = np.max(abs(steady1_p-pArr1))
+    
+    logging.info("Error in u: %f",error1_u)
+    logging.info("Error in b: %f",error1_b)
+    logging.info("Error in p: %f",error1_p)
     logging.info("test 1 over \n ----------------------")
     
 
 
-    #print("STARTING TEST 2")
-    logging.info("STARTING TEST 2")
-    testProb2 = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
-    testProb2.initialize()
+    logging.info("Test 2 Starting")
+    test2 = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
+    test2.initialize()
     uArr2,bArr2,pArr2,dt2 = open_fields("test_files/optim_test/Ra5000Pr100alpha1.5585Nx128Nz64T500.npy")
-    guess = arrsToStateVec(uArr, bArr, pArr)
-    iters = optimization(testProb,guess,2,1e-3,10,True)
+    guess2 = arrsToStateVec(uArr2, bArr2, pArr2)
+    iters2 = steady_state_finder(test2,guess1,2,1e-3,10,True)
+    logging.info("Number of iterations: %i", iters2)
+
+
+    test2.u.change_scales(1)
+    test2.b.change_scales(1)
+    test2.p.change_scales(1)
     
-    #print("Number of iterations:")
-    #print(iters)
-    logging.info('number of iterations: %i',iters)
-    #testProb2.plot()
-    #testProb.saveToFile('opti_output_remote/opti_test1')
-    #print("Error:")
-    err2 = np.max(abs(testProb2.u.allgather_data()-uArr))
-    logging.info("error: %f",err2)
-    #print(err2)
-    return testProb2
+    steady2_u = test2.u.allgather_data('g')
+    steady2_b = test2.b.allgather_data('g')
+    steady2_p = test2.p.allgather_data('g')
+    
+    
+    error2_u = np.max(abs(steady2_u-uArr1))
+    error2_b = np.max(abs(steady2_b-bArr1))
+    error2_p = np.max(abs(steady2_p-pArr1))
+    
+    logging.info("Error in u: %f",error2_u)
+    logging.info("Error in b: %f",error2_b)
+    logging.info("Error in p: %f",error2_p)
+    logging.info("test 2 over \n ----------------------")
+    return test1, test2, uArr1, uArr2
     
     
 
@@ -800,5 +815,5 @@ def test_all():
 #test_Gt()
 #test_array_manipulations()      
 #testing_functions()        
-test_optimization()
+test1, test2, uArr1, uArr2 = steady_state_test()
 
