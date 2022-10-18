@@ -129,7 +129,8 @@ class RBC_Problem:
         if self.init_u is None and self.init_b is None:
             self.b.fill_random('g', seed=42, distribution='normal', scale=1e-3) # Random noise
             self.b['g'] *= (1+self.z) * (1 - self.z) # Damp noise at walls
-            self.b['g'] += self.conduction_state() # Add appropriate conduction state
+            # self.b['g'] += 0.01*np.cos((1/2)*np.pi*self.x)*np.sin(np.pi*self.z*self.alpha)
+            # self.b['g'] += self.conduction_state() # Add appropriate conduction state
             self.init_u = np.copy(u['g'])
             self.init_b = np.copy(b['g'])
             self.init_p = np.copy(p['g'])
@@ -620,92 +621,123 @@ def test_array_manipulations():
 ############################
 
 def steady_state_test():
+    # Nx = 128
+    # Nz = 64
+    # logging.info("Test 1 Starting")
+    # test1 = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
+    # test1.initialize()
+    uArr1,bArr1,pArr1,dt1 = open_fields("test_files/optim_test/Ra5000Pr100alpha1.5585Nx128Nz64T1000.npy")
+    # guess1 = arrsToStateVec(uArr1, bArr1, pArr1)
+    # iters1 = steady_state_finder(test1,guess1,2,1e-3,10,True)
+    # logging.info("Number of iterations: %i", iters1)
+
+
+    # test1.u.change_scales(1)
+    # test1.b.change_scales(1)
+    # test1.p.change_scales(1)
+    
+    # steady1_u = test1.u.allgather_data('g')
+    # steady1_b = test1.b.allgather_data('g')
+    # steady1_p = test1.p.allgather_data('g')
+    
+    
+    # error1_u = np.max(abs(steady1_u-uArr1))
+    # error1_b = np.max(abs(steady1_b-bArr1))
+    # error1_p = np.max(abs(steady1_p-pArr1))
+    
+    # logging.info("Error in u: %f",error1_u)
+    # logging.info("Error in b: %f",error1_b)
+    # logging.info("Error in p: %f",error1_p)
+    # logging.info("test 1 over \n ----------------------")
+    
+
+
+    # logging.info("Test 2 Starting")
+    # test2 = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
+    # test2.initialize()
+    # uArr2,bArr2,pArr2,dt2 = open_fields("test_files/optim_test/Ra5000Pr100alpha1.5585Nx128Nz64T500.npy")
+    # guess2 = arrsToStateVec(uArr2, bArr2, pArr2)
+    # iters2 = steady_state_finder(test2,guess2,2,1e-3,10,True)
+    # logging.info("Number of iterations: %i", iters2)
+
+
+    # test2.u.change_scales(1)
+    # test2.b.change_scales(1)
+    # test2.p.change_scales(1)
+    
+    # steady2_u = test2.u.allgather_data('g')
+    # steady2_b = test2.b.allgather_data('g')
+    # steady2_p = test2.p.allgather_data('g')
+    
+    
+    # error2_u = np.max(abs(steady2_u-uArr1))
+    # error2_b = np.max(abs(steady2_b-bArr1))
+    # error2_p = np.max(abs(steady2_p-pArr1))
+    
+    # logging.info("Error in u: %f",error2_u)
+    # logging.info("Error in b: %f",error2_b)
+    # logging.info("Error in p: %f",error2_p)
+    # logging.info("test 2 over \n ----------------------")
+    
+    
+    # logging.info("Test 3 Starting")
+    # test3 = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
+    # test3.initialize()
+    # uArr3,bArr3,pArr3,dt3 = open_fields("test_files/optim_test/Ra5000Pr100alpha1.5585Nx128Nz64T200.npy")
+    # guess3 = arrsToStateVec(uArr3, bArr3, pArr3)
+    # iters3 = steady_state_finder(test3,guess3,2,1e-3,10,True)
+    # logging.info("Number of iterations: %i", iters3)
+
+
+    # test3.u.change_scales(1)
+    # test3.b.change_scales(1)
+    # test3.p.change_scales(1)
+    
+    # steady3_u = test3.u.allgather_data('g')
+    # steady3_b = test3.b.allgather_data('g')
+    # steady3_p = test3.p.allgather_data('g')
+    
+    
+    # error3_u = np.max(abs(steady3_u-uArr1))
+    # error3_b = np.max(abs(steady3_b-bArr1))
+    # error3_p = np.max(abs(steady3_p-pArr1))
+    
+    # logging.info("Error in u: %f",error3_u)
+    # logging.info("Error in b: %f",error3_b)
+    # logging.info("Error in p: %f",error3_p)
+    # logging.info("test 3 over \n ----------------------")
+    
     Nx = 128
     Nz = 64
-    logging.info("Test 1 Starting")
-    test1 = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
-    test1.initialize()
-    uArr1,bArr1,pArr1,dt1 = open_fields("test_files/optim_test/Ra5000Pr100alpha1.5585Nx128Nz64T1000.npy")
-    guess1 = arrsToStateVec(uArr1, bArr1, pArr1)
-    iters1 = steady_state_finder(test1,guess1,2,1e-3,10,True)
-    logging.info("Number of iterations: %i", iters1)
+    
+    logging.info("Test 4 Starting")
+    test4 = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
+    test4.initialize()
+    uArr4,bArr4,pArr4,dt4 = open_fields("test_files/optim_test/Ra5000Pr100alpha1.5585Nx128Nz64T195.npy")
+    guess4 = arrsToStateVec(uArr4, bArr4, pArr4)
+    iters4 = steady_state_finder(test4,guess4,10,1e-3,10,True)
+    logging.info("Number of iterations: %i", iters4)
 
 
-    test1.u.change_scales(1)
-    test1.b.change_scales(1)
-    test1.p.change_scales(1)
+    test4.u.change_scales(1)
+    test4.b.change_scales(1)
+    test4.p.change_scales(1)
     
-    steady1_u = test1.u.allgather_data('g')
-    steady1_b = test1.b.allgather_data('g')
-    steady1_p = test1.p.allgather_data('g')
-    
-    
-    error1_u = np.max(abs(steady1_u-uArr1))
-    error1_b = np.max(abs(steady1_b-bArr1))
-    error1_p = np.max(abs(steady1_p-pArr1))
-    
-    logging.info("Error in u: %f",error1_u)
-    logging.info("Error in b: %f",error1_b)
-    logging.info("Error in p: %f",error1_p)
-    logging.info("test 1 over \n ----------------------")
-    
-
-
-    logging.info("Test 2 Starting")
-    test2 = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
-    test2.initialize()
-    uArr2,bArr2,pArr2,dt2 = open_fields("test_files/optim_test/Ra5000Pr100alpha1.5585Nx128Nz64T500.npy")
-    guess2 = arrsToStateVec(uArr2, bArr2, pArr2)
-    iters2 = steady_state_finder(test2,guess2,2,1e-3,10,True)
-    logging.info("Number of iterations: %i", iters2)
-
-
-    test2.u.change_scales(1)
-    test2.b.change_scales(1)
-    test2.p.change_scales(1)
-    
-    steady2_u = test2.u.allgather_data('g')
-    steady2_b = test2.b.allgather_data('g')
-    steady2_p = test2.p.allgather_data('g')
+    steady4_u = test4.u.allgather_data('g')
+    steady4_b = test4.b.allgather_data('g')
+    steady4_p = test4.p.allgather_data('g')
     
     
-    error2_u = np.max(abs(steady2_u-uArr1))
-    error2_b = np.max(abs(steady2_b-bArr1))
-    error2_p = np.max(abs(steady2_p-pArr1))
+    error4_u = np.max(abs(steady4_u-uArr1))
+    error4_b = np.max(abs(steady4_b-bArr1))
+    error4_p = np.max(abs(steady4_p-pArr1))
     
-    logging.info("Error in u: %f",error2_u)
-    logging.info("Error in b: %f",error2_b)
-    logging.info("Error in p: %f",error2_p)
-    logging.info("test 2 over \n ----------------------")
-    
-    
-    logging.info("Test 3 Starting")
-    test3 = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
-    test3.initialize()
-    uArr3,bArr3,pArr3,dt3 = open_fields("test_files/optim_test/Ra5000Pr100alpha1.5585Nx128Nz64T200.npy")
-    guess3 = arrsToStateVec(uArr3, bArr3, pArr3)
-    iters3 = steady_state_finder(test3,guess3,2,1e-3,10,True)
-    logging.info("Number of iterations: %i", iters3)
-
-
-    test3.u.change_scales(1)
-    test3.b.change_scales(1)
-    test3.p.change_scales(1)
-    
-    steady3_u = test3.u.allgather_data('g')
-    steady3_b = test3.b.allgather_data('g')
-    steady3_p = test3.p.allgather_data('g')
-    
-    
-    error3_u = np.max(abs(steady3_u-uArr1))
-    error3_b = np.max(abs(steady3_b-bArr1))
-    error3_p = np.max(abs(steady3_p-pArr1))
-    
-    logging.info("Error in u: %f",error3_u)
-    logging.info("Error in b: %f",error3_b)
-    logging.info("Error in p: %f",error3_p)
-    logging.info("test 3 over \n ----------------------")
-    return test1, test2, test3, uArr1, uArr2, uArr3
+    logging.info("Error in u: %f",error4_u)
+    logging.info("Error in b: %f",error4_b)
+    logging.info("Error in p: %f",error4_p)
+    logging.info("test 4 over \n ----------------------")
+    return test4, uArr1
+    #return test1, test2, test3, uArr1, uArr2, uArr3
 
 def sondak_test():
     alphas = [2.6,2.8,3.0]
@@ -745,8 +777,8 @@ def test_all():
 #test_Gt()
 #test_array_manipulations()      
 #testing_functions()        
-#test1, test2, test3, uArr1, uArr2, uArr3 = steady_state_test()
+test4, uArr1 = steady_state_test()
 #test_all()
-sondak_test()
+
 
 
