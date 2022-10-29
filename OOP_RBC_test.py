@@ -713,9 +713,9 @@ def steady_state_test():
     logging.info("Test 4 Starting")
     test4 = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
     test4.initialize()
-    uArr4,bArr4,pArr4,dt4 = open_fields("test_files/optim_test/Ra5000Pr100alpha1.5585Nx128Nz64T195.npy")
+    uArr4,bArr4,pArr4,dt4 = open_fields("test_files/optim_test/Ra5000Pr100alpha1.5585Nx128Nz64T1000.npy")
     guess4 = arrsToStateVec(uArr4, bArr4, pArr4)
-    iters4 = steady_state_finder(test4,guess4,10,1e-3,10,True)
+    iters4 = steady_state_finder(test4,guess4,2,1e-3,2,True)
     logging.info("Number of iterations: %i", iters4)
 
 
