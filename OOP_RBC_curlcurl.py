@@ -19,6 +19,54 @@ dealias = 3/2
 dtype = np.float64
 
 
+class Laplacian_Problem:
+    def __init__(self,Nx,Nz,alpha):
+        self.Nx = Nx
+        self.Nz = Nz
+        self.alpha = alpha
+    def initialize(self):
+        self.coords = d3.CartesianCoordinates('x', 'z')
+        self.dist = d3.Distributor(self.coords, dtype=dtype)
+        self.xbasis = d3.RealFourier(self.coords['x'], size=self.Nx, bounds=(-1*np.pi/self.alpha, np.pi/self.alpha))
+        self.zbasis = d3.Chebyshev(self.coords['z'], size=self.Nz, bounds=(-1, 1))
+        
+        u = self.dist.Field(name='u', bases=(self.xbasis, self.zbasis))
+        v = self.dist.Field(name='v', bases=(self.xbasis, self.zbasis))
+        phi = self.dist.Field(name='phi', bases=(self.xbasis, self.zbasis))
+        tau_1 = self.dist.Field(name='tau_1', bases=self.xbasis)
+        tau_2 = self.dist.Field(name='tau_2', bases=self.xbasis)
+        
+        self.u = u
+        self.v = v
+        self.phi = phi
+        self.tau_1 = tau_1
+        self.tau_2 = tau_2
+        
+        dz = lambda A: d3.Differentiate(A, self.coords['z'])
+        dx = lambda A: d3.Differentiate(A, self.coords['x'])
+        lift_basis = self.zbasis.clone_with(a=3/2, b=3/2) # Natural output basis
+        lift = lambda A, n: d3.Lift(A, lift_basis, n)
+
+        
+        self.problem = d3.LBVP([self.u,self.v,self.tau_1,self.tau_2],namespace=locals())
+        self.problem.add_equation("lap(v) + lift(tau_1,-1) + lift(tau_2,-2) = phi")
+        self.problem.add_equation("dx(u) + dz(v) + lift(tau_1,-1) = 0",condition='nx!=0')
+        self.problem.add_equation("u=0",condition='nx==0')
+        self.problem.add_equation("v(z=-1) = 0")
+        self.problem.add_equation("v(z=1) = 0")
+        
+        self.solver = self.problem.build_solver()
+    
+    def getVel(self,phiArr):
+        self.phi.load_from_global_grid_data(phiArr)
+        self.solver.solve()
+        uArr = self.u.allgather_data('g')
+        vArr = self.v.allgather_data('g')
+        return uArr, vArr
+
+        
+        
+
 class RBC_Problem:
     def __init__(self,Ra,Pr,alpha,Nx,Nz,bcs,time_step=None,initial_u=None,initial_v=None,initial_phi=None,initial_b=None):
         self.Ra = Ra
@@ -39,14 +87,16 @@ class RBC_Problem:
         self.init_b = initial_b
         self.init_dt = time_step
         
-        self.volume = ((2*np.pi)/alpha)*2
-        
-
+        self.volume = ((2*np.pi)/alpha)*2    
         
     def initialize(self):
         self.time = 0
         self.tVals = []
         self.NuVals = []
+        
+        ###making laplacian problem that will find u,v from phi for this case
+        self.phi_lap = Laplacian_Problem(self.Nx, self.Nz, self.alpha)
+        self.phi_lap.initialize()
         
         ##making Bases
         self.coords = d3.CartesianCoordinates('x','z')
@@ -199,9 +249,11 @@ class RBC_Problem:
             return (1+self.z)*(self.z-1)
         
     def reset(self):
+        ### NEED TO CHANGE
         self.u.load_from_global_grid_data(self.init_u)
-        self.b.load_from_global_grid_data(self.init_b)
-        self.p.load_from_global_grid_data(self.init_p)
+        self.v.load_from_global_grid_data(self.init_v)
+        self.phi.load_from_global_grid_data(self.init_phi)
+        self.b.load_from_global_grid_data(self.b)
         self.time_step = self.init_dt
         self.time = 0
         self.tVals = []
@@ -289,36 +341,31 @@ class RBC_Problem:
     
     def loadFromFile(self,time,path=None):
         if path == None:
-            path = 'Outputs/Ra_' + str(self.Ra) + '/Pr_' + str(self.Pr) +   '/' + 'alpha_' + str(self.alpha) + '/' + 'Nx_' + str(self.Nx) + '/' + 'Nz_' + str(self.Nz) + '/T_' + str(time) + '/'
+            path = 'Outputs/' + self.bcs + '/Ra_' + str(self.Ra) + '/Pr_' + str(self.Pr) +   '/' + 'alpha_' + str(self.alpha) + '/' + 'Nx_' + str(self.Nx) + '/' + 'Nz_' + str(self.Nz) + '/T_' + str(time) + '/'
         
-        # uFile = path + 'u.npy'
-        # bFile = path + 'b.npy'
-        # pFile = path + 'p.npy' 
-        
-        # uFromFile = np.load(uFile)
-        # bFromFile = np.load(bFile)
-        # pFromFile = np.load(pFile)
-        
-        loadFile = path + '.npy'
+        loadFile = path + 'data.npy'
         
         with open(loadFile,'rb') as l_File:
             uFromFile = np.load(l_File)
+            vFromFile = np.load(l_File)
             bFromFile = np.load(l_File)
-            pFromFile = np.load(l_File)
+            phiFromFile = np.load(l_File)
             dt = np.load(l_File)
         
         self.u['g'] = uFromFile
+        self.v['g'] = vFromFile
         self.b['g'] = bFromFile
-        self.p['g'] = pFromFile
+        self.phi['g'] = phiFromFile
         self.time_step = dt
     
     def saveToFile(self,path=None):
         self.u.change_scales(1)
+        self.v.change_scales(1)
         self.b.change_scales(1)
-        self.p.change_scales(1)
+        self.phi.change_scales(1)
         
         if path == None:
-            path = 'Outputs/Ra_' + str(self.Ra) + '/Pr_' + str(self.Pr)  +  '/' + 'alpha_' + str(self.alpha) + '/' + 'Nx_' + str(self.Nx) + '/' + 'Nz_' + str(self.Nz) + '/T_' + str(self.time) + '/'
+            path = 'Outputs/' + self.bcs + '/Ra_' + str(self.Ra) + '/Pr_' + str(self.Pr)  +  '/' + 'alpha_' + str(self.alpha) + '/' + 'Nx_' + str(self.Nx) + '/' + 'Nz_' + str(self.Nz) + '/T_' + str(self.time) + '/'
             try:
                 os.makedirs(path)
             except FileExistsError:
@@ -328,11 +375,12 @@ class RBC_Problem:
                 else:
                     raise FileExistsError
             
-        outputFile = path + '.npy'
+        outputFile = path + 'data.npy'
         with open(outputFile,'wb') as outFile:
             np.save(outFile,self.u['g'])
+            np.save(outFile,self.v['g'])
             np.save(outFile,self.b['g'])
-            np.save(outFile,self.p['g'])
+            np.save(outFile,self.phi['g'])
             np.save(outFile,self.time_step)
             
         
@@ -340,3 +388,262 @@ class RBC_Problem:
         repr_string = "RBC Problem in configuration " + self.bcs + " with following params: \n" + "Ra= " + str(self.Ra) + "\n" + "Pr= " + str(self.Pr) + "\n" + "alpha= " + str(self.alpha) + "\n"
         repr_string = repr_string + "\n" + "Simulation params: \n" + "Nx= " + str(self.Nx) + "\n" + "Nz= " + str(self.Nz)
         return repr_string
+    
+
+
+
+######################################
+### to load arrays from .npy files ###
+######################################
+
+def open_fields(file_name):
+    with open(file_name,'rb') as l_File:
+        uFromFile = np.load(l_File)
+        vFromFile = np.load(l_File)
+        bFromFile = np.load(l_File)
+        phiFromFile = np.load(l_File)
+        dt = np.load(l_File)
+    return uFromFile, vFromFile,bFromFile, phiFromFile, dt
+
+#########################
+### finding steady state ###
+#########################
+
+def probToStateVec(RBCProb):
+    Nx = RBCProb.Nx
+    Nz = RBCProb.Nz
+    
+    RBCProb.phi.change_scales(1)
+    RBCProb.b.change_scales(1)
+    bArr = RBCProb.b.allgather_data('g')
+    phiArr = RBCProb.phi.allgather_data('g')
+
+    X = np.zeros(2*Nx*Nz)
+    bArr = bArr.flatten()
+    phiArr = phiArr.flatten()
+    X[0:Nx*Nz] = phiArr
+    X[Nx*Nz:] = bArr
+    return X
+
+def arrsToStateVec(phiArr,bArr):
+    Nx,Nz = bArr.shape
+    X = np.zeros(2*Nx*Nz)
+    bArr = bArr.flatten()
+    phiArr = phiArr.flatten()
+    X[0:Nx*Nz] = phiArr
+    X[Nx*Nz:] = bArr
+    return X
+
+def stateToArrs(X,Nx,Nz):
+    phiArr = X[0:Nx*Nz]
+    bArr = X[Nx*Nz:]
+    
+    #get them into a format we can put into the flow map function
+    phiArr = np.reshape(phiArr,(-1,Nz))
+    bArr = np.reshape(bArr,(-1,Nz))
+    return phiArr, bArr
+
+def Gt(X,T,problem):
+    phiArr, bArr = stateToArrs(X,problem.Nx,problem.Nz)
+    uArr, vArr = problem.phi_lap.getVel(phiArr)
+    problem.time = 0
+    problem.phi.load_from_global_grid_data(phiArr)
+    problem.u.load_from_global_grid_data(uArr)
+    problem.v.load_from_global_grid_data(vArr)
+    problem.b.load_from_global_grid_data(bArr)
+    problem.solve_system(T)
+    Gt_Vec = probToStateVec(problem)
+    Gt_Vec = (Gt_Vec - X)/T
+    return Gt_Vec
+
+def jac_approx(X,dX,F,T,problem):
+    mach_eps = np.finfo(float).eps
+    normX = np.linalg.norm(X)
+    normdX = np.linalg.norm(dX)
+    dotprod = np.dot(X,dX)
+    eps = (np.sqrt(mach_eps)/(normdX**2))*max(dotprod,normdX)
+    #eps = 1e-3
+    GtArr = Gt(X+eps*dX,T,problem).T
+    return (GtArr + F.T)/eps
+
+
+def steady_state_finder(problem,guess,T,tol,max_iters,write):
+    #problem is an RBC_problem
+    #guess is a guess for the state vec
+    #T is time we are integrating out to
+    #tol is tolerance for Newton method 
+    #max_iters is max Newton iterations that will be done
+    err = 1e10
+    iters = 0
+
+    Nx = problem.Nx
+    Nz = problem.Nz
+
+    X = guess
+    while err > tol and iters < max_iters:
+        if write == 'y':
+            #print("iter: ",iters)
+            #print(X)
+            #print("-------------")
+            pass
+
+        F = -1*Gt(X,T,problem)
+        A = lambda dX : jac_approx(X,dX,F,T,problem)
+        A_mat = LinearOperator((2*Nx*Nz,2*Nx*Nz),A)
+        delta_X,code =gmres(A_mat,F,tol=1e-3)
+        if code != 0:
+            raise("gmres did not converge")
+        X= X+delta_X
+        iters += 1
+        err = np.linalg.norm(Gt(X,T,problem))
+    phiStead, bStead = stateToArrs(X,Nx,Nz)
+    problem.phi.load_from_global_grid_data(phiStead)
+    problem.b.load_from_global_grid_data(bStead)
+    return iters
+
+###############################################################################
+
+                                        #########
+                                        #TESTING#
+                                        #########
+
+
+########################
+### testing restarts ###
+########################
+
+def test_restart():
+    Nx = 128
+    Nz = 64
+    test_start = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
+    test_start.initialize()
+    test_start.solve_system(100)
+    test_start.saveToFile('test_save')
+    
+    test1 = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
+    test1.initialize()
+    test1.loadFromFile(1,'test_save')
+    test1.solve_system(100)
+    
+    test_full = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
+    test_full.initialize()
+    test_full.solve_system(200)
+    
+    test1.u.change_scales(1)
+    test1.v.change_scales(1)
+    test1.b.change_scales(1)
+    test1.phi.change_scales(1)
+    
+    test_full.u.change_scales(1)
+    test_full.v.change_scales(1)
+    test_full.b.change_scales(1)
+    test_full.phi.change_scales(1)
+    
+    
+    uErr = np.max(abs(test1.u['g']-test_full.u['g']))
+    vErr = np.max(abs(test1.v['g']-test_full.v['g']))
+    bErr = np.max(abs(test1.b['g']-test_full.b['g']))
+    phiErr = np.max(abs(test1.phi['g']-test_full.phi['g']))
+    print('u error: ', uErr)
+    print('v error: ', vErr)
+    print('b error: ', bErr)
+    print('phi error: ', phiErr)
+    
+def test_restart_phi():
+    Nx = 128
+    Nz = 64
+    test_start = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
+    test_start.initialize()
+    test_start.solve_system(100)
+    test_start.saveToFile('test_save')
+    
+    uArr, vArr, bArr, phiArr, dt = open_fields('test_savedata.npy')
+    
+    test1 = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
+    test1.initialize()
+    test1.phi.load_from_global_grid_data(phiArr)
+    test1.solve_system(100)
+    
+    test_full = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
+    test_full.initialize()
+    test_full.solve_system(200)
+    
+    test1.u.change_scales(1)
+    test1.v.change_scales(1)
+    test1.b.change_scales(1)
+    test1.phi.change_scales(1)
+    
+    test_full.u.change_scales(1)
+    test_full.v.change_scales(1)
+    test_full.b.change_scales(1)
+    test_full.phi.change_scales(1)
+    
+    
+    uErr = np.max(abs(test1.u['g']-test_full.u['g']))
+    vErr = np.max(abs(test1.v['g']-test_full.v['g']))
+    bErr = np.max(abs(test1.b['g']-test_full.b['g']))
+    phiErr = np.max(abs(test1.phi['g']-test_full.phi['g']))
+    print('u error: ', uErr)
+    print('v error: ', vErr)
+    print('b error: ', bErr)
+    print('phi error: ', phiErr)
+    
+
+
+#######################################
+### testing the array manipulations ###
+#######################################
+
+
+def test_steady_finder():
+    uArr1,vArr1,bArr1, phiArr1,dt1 = open_fields("test_files_curlcurl/steady_state_tests/Ra5000Pr100alpha1.5585Nx128Nz64T1000.npy")
+    Nx = 128
+    Nz = 64
+    
+    test1 = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
+    test1.initialize()
+    guess1 = arrsToStateVec(phiArr1, bArr1)
+    iters1 = steady_state_finder(test1,guess1,2,1e-3,2,True)
+    
+    test1.b.change_scales(1)
+    test1.phi.change_scales(1)
+    
+    steady1_b = test1.b.allgather_data('g')
+    steady1_phi = test1.phi.allgather_data('g')
+    
+    
+    error1_b = np.max(abs(steady1_b-bArr1))
+    error1_phi = np.max(abs(steady1_phi-phiArr1))
+    
+    logging.info("number of iters: %i", iters1)
+    logging.info("Error in b: %f",error1_b)
+    logging.info("Error in phi: %f",error1_phi)
+    logging.info("test 4 over \n ----------------------")
+    
+    
+    uArr2,vArr2,bArr2, phiArr2,dt2 = open_fields("test_files_curlcurl/steady_state_tests/Ra5000Pr100alpha1.5585Nx128Nz64T250.npy")
+    
+    test2 = RBC_Problem(5000,100,1.5585,Nx,Nz,'RB1')
+    test2.initialize()
+    guess2 = arrsToStateVec(phiArr2, bArr2)
+    iters2 = steady_state_finder(test2,guess2,2,1e-3,2,True)
+    
+    test2.b.change_scales(1)
+    test2.phi.change_scales(1)
+    
+    steady2_b = test1.b.allgather_data('g')
+    steady2_phi = test1.phi.allgather_data('g')
+    
+    error2_b = np.max(abs(steady2_b-bArr1))
+    error2_phi = np.max(abs(steady2_phi-phiArr1))
+    
+    logging.info("number of iters: %i", iters2)
+    logging.info("Error in b: %f",error2_b)
+    logging.info("Error in phi: %f",error2_phi)
+    logging.info("test 4 over \n ----------------------")
+    
+    return test2, bArr1,phiArr1
+    
+    
+    
+    
