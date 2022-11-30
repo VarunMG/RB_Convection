@@ -652,14 +652,16 @@ def follow_branch():
     #RaVals = [6000,7000,8000,8500,9000,9500,10000]
     #RaVals = [10000,15000,20000,25000,30000,35000,40000]
     #RaVals = [40000,45000,50000,]
-    RaVals1 = np.arange(2e3,5e3,1e3)
-    RaVals2 = np.arange(1e4,10e4,5e3)
-    RaVals = np.block( [RaVals1 , RaVals2])
+    #RaVals1 = np.arange(2e3,5e3,1e3)
+    #RaVals2 = np.arange(1e4,10e4,5e3)
+    #RaVals = np.block( [RaVals1 , RaVals2])
+    RaVals = [100000,105000,110000]
     #RaVals = [2000,3000,4000,5000]
     steady_states = []
+    Nu_Vals = []
     Nx = 128
     Nz = 64
-    uArr,vArr,bArr, phiArr,dt = open_fields('RB1_steady_states/Pr7/Ra2000Pr7alpha1.5585Nx128Nz64data.npy')
+    uArr,vArr,bArr, phiArr,dt = open_fields('RB1_steady_states/Pr100/primary_box/Ra95000.0Pr100alpha1.5585Nx128Nz64data.npy')
     guess = arrsToStateVec(phiArr, bArr)
     #guess = np.zeros(2*Nx*Nz)
     #dt = 0.125
@@ -670,6 +672,8 @@ def follow_branch():
         print('Ra= ',Ra)
         print('steady state found . Iters = ', iters)
         steady_states.append(steady)
+        Nu = steady.calc_Nu()
+        Nu_Vals.append(Nu)
         
         steady.phi.change_scales(1)
         steady.b.change_scales(1)
@@ -678,9 +682,41 @@ def follow_branch():
         guess = arrsToStateVec(steady_phi, steady_b)
         dt = steady.time_step
         
-    return steady_states
+    return RaVals, Nu_Vals, steady_states
         
     
+def optimize_alpha():
+    Ra = 80000
+    Nx = 128
+    Nz = 64
+    uArr,vArr,bArr, phiArr,dt = open_fields('RB1_steady_states/Pr100/primary_box/Ra80000.0Pr100alpha1.5585Nx128Nz64data.npy')
+    guess = arrsToStateVec(phiArr, bArr)
+    alpha_vals = np.linspace(2,10,17)
+    steady_states = []
+    Nu_Vals = []
+    for alpha in alpha_vals:
+        steady = RBC_Problem(Ra,100,alpha,Nx,Nz,'RB1',time_step=dt)
+        steady.initialize()
+        iters = steady_state_finder(steady, guess, 2, 1e-7, 50, False)
+        print('alpha= ', alpha)
+        print("steady state found. Iters= ", iters)
+        steady_states.append(steady)
+        Nu = steady.calc_Nu()
+        Nu_Vals.append(Nu)
+        
+        steady.phi.change_scales(1)
+        steady.b.change_scales(1)
+        steady_b = steady.b.allgather_data('g')
+        steady_phi = steady.phi.allgather_data('g')
+        guess = arrsToStateVec(steady_phi, steady_b)
+        dt = steady.time_step
+    
+    return alpha_vals, Nu_Vals, steady_states
+        
+        
+        
+        
+        
     
     
     
