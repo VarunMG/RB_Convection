@@ -206,10 +206,10 @@ class RBC_Problem:
         
         #if no initial conditions given, use a perturbed conduction state
         if self.init_u is None and self.init_v is None and self.init_b is None and self.bcs=='RB1':
-            self.b.fill_random('g', seed=42, distribution='normal', scale=1e-3) # Random noise
-            self.b['g'] *= (1+self.z) * (1 - self.z) # Damp noise at walls
+            #self.b.fill_random('g', seed=42, distribution='normal', scale=1e-3) # Random noise
+            #self.b['g'] *= (1+self.z) * (1 - self.z) # Damp noise at walls
             # self.b['g'] += 0.01*np.cos((1/2)*np.pi*self.x)*np.sin(np.pi*self.z*self.alpha)
-            self.b['g'] += self.conduction_state() # Add appropriate conduction state
+            self.b['g'] += self.conduction_state() + np.cos(self.alpha*self.x)*np.cos(np.pi*self.z/2) # Add appropriate conduction state
             self.init_u = np.copy(self.u['g'])
             self.init_v = np.copy(self.v['g'])
             self.init_b = np.copy(self.b['g'])
@@ -303,7 +303,10 @@ class RBC_Problem:
             self.solver.log_stats()
         self.time_step = timestep
         self.time = end_time
-        
+    
+    def calc_Nu(self):
+        Nu = self.flow.volume_integral('Nu')/self.volume
+        return Nu
     
     def plot(self):
         X,Z = np.meshgrid(self.x.ravel(),self.z.ravel())
@@ -643,6 +646,40 @@ def test_steady_finder():
     logging.info("test 4 over \n ----------------------")
     
     return test2, bArr1,phiArr1
+
+def follow_branch():
+    #RaVals = [5000,7000,10000,13000,17000,20000]
+    #RaVals = [6000,7000,8000,8500,9000,9500,10000]
+    #RaVals = [10000,15000,20000,25000,30000,35000,40000]
+    #RaVals = [40000,45000,50000,]
+    RaVals1 = np.arange(2e3,5e3,1e3)
+    RaVals2 = np.arange(1e4,10e4,5e3)
+    RaVals = np.block( [RaVals1 , RaVals2])
+    #RaVals = [2000,3000,4000,5000]
+    steady_states = []
+    Nx = 128
+    Nz = 64
+    uArr,vArr,bArr, phiArr,dt = open_fields('RB1_steady_states/Pr7/Ra2000Pr7alpha1.5585Nx128Nz64data.npy')
+    guess = arrsToStateVec(phiArr, bArr)
+    #guess = np.zeros(2*Nx*Nz)
+    #dt = 0.125
+    for Ra in RaVals:
+        steady = RBC_Problem(Ra,100,1.5585,Nx,Nz,'RB1',time_step=dt)
+        steady.initialize()
+        iters = steady_state_finder(steady, guess, 2, 1e-7, 50, False)
+        print('Ra= ',Ra)
+        print('steady state found . Iters = ', iters)
+        steady_states.append(steady)
+        
+        steady.phi.change_scales(1)
+        steady.b.change_scales(1)
+        steady_b = steady.b.allgather_data('g')
+        steady_phi = steady.phi.allgather_data('g')
+        guess = arrsToStateVec(steady_phi, steady_b)
+        dt = steady.time_step
+        
+    return steady_states
+        
     
     
     
