@@ -260,7 +260,7 @@ class RBC_Problem:
         self.NuVals = []
         
     
-    def solve_system(self,end_time,trackNu=None,anim_frames=False):
+    def solve_system(self,end_time,trackNu=None,anim_frames=False,write=False):
         assert(end_time > self.time)
         self.solver.sim_time = self.time
         self.solver.stop_sim_time = end_time
@@ -271,8 +271,12 @@ class RBC_Problem:
             X,Z = np.meshgrid(self.x.ravel(),self.z.ravel())
         
         first_step = True
+        if not write:
+            for system in ['solvers']:
+                logging.getLogger(system).setLevel(logging.WARNING)
         try:
-            logger.info('Starting main loop')
+            if write:
+                logger.info('Starting main loop')
             while self.solver.proceed:
                 if self.time_step != None and first_step:
                     timestep = self.time_step
@@ -295,7 +299,8 @@ class RBC_Problem:
                     if trackNu:
                          self.tVals.append(self.solver.sim_time)
                          self.NuVals.append(flow_Nu)
-                    logger.info('Iteration=%i, Time=%e, dt=%e, Nu=%f' %(self.solver.iteration, self.solver.sim_time, timestep,flow_Nu))
+                    if write:
+                        logger.info('Iteration=%i, Time=%e, dt=%e, Nu=%f' %(self.solver.iteration, self.solver.sim_time, timestep,flow_Nu))
         except:
             logger.error('Exception raised, triggering end of main loop.')
             raise
@@ -343,10 +348,11 @@ class RBC_Problem:
         plt.suptitle(title)
     
     def loadFromFile(self,time,path=None):
-        if path == None:
+        if path is None:
             path = 'Outputs/' + self.bcs + '/Ra_' + str(self.Ra) + '/Pr_' + str(self.Pr) +   '/' + 'alpha_' + str(self.alpha) + '/' + 'Nx_' + str(self.Nx) + '/' + 'Nz_' + str(self.Nz) + '/T_' + str(time) + '/'
+            path = path + 'data.npy'
         
-        loadFile = path + 'data.npy'
+        loadFile = path
         
         with open(loadFile,'rb') as l_File:
             uFromFile = np.load(l_File)
@@ -377,8 +383,9 @@ class RBC_Problem:
                     pass
                 else:
                     raise FileExistsError
+            path = path + 'data.npy'
             
-        outputFile = path + 'data.npy'
+        outputFile = path
         with open(outputFile,'wb') as outFile:
             np.save(outFile,self.u['g'])
             np.save(outFile,self.v['g'])
@@ -655,25 +662,33 @@ def follow_branch():
     #RaVals1 = np.arange(2e3,5e3,1e3)
     #RaVals2 = np.arange(1e4,10e4,5e3)
     #RaVals = np.block( [RaVals1 , RaVals2])
-    RaVals = [100000,105000,110000]
-    #RaVals = [2000,3000,4000,5000]
+    #RaVals = [100000,105000,110000]
+    #RaVals = [2000,3000]
+    RaVals = [3000,4000]
     steady_states = []
     Nu_Vals = []
     Nx = 128
     Nz = 64
-    uArr,vArr,bArr, phiArr,dt = open_fields('RB1_steady_states/Pr100/primary_box/Ra95000.0Pr100alpha1.5585Nx128Nz64data.npy')
+    uArr,vArr,bArr, phiArr,dt = open_fields('RB1_steady_states/Pr100/primary_box/Ra3000.0Pr100alpha1.5585Nx128Nz64data.npy')
     guess = arrsToStateVec(phiArr, bArr)
     #guess = np.zeros(2*Nx*Nz)
     #dt = 0.125
+    filename = 'branch_tester/Pr100'
     for Ra in RaVals:
         steady = RBC_Problem(Ra,100,1.5585,Nx,Nz,'RB1',time_step=dt)
         steady.initialize()
         iters = steady_state_finder(steady, guess, 2, 1e-7, 50, False)
-        print('Ra= ',Ra)
-        print('steady state found . Iters = ', iters)
+        #print('Ra= ',Ra)
+        #print('steady state found . Iters = ', iters)
         steady_states.append(steady)
         Nu = steady.calc_Nu()
         Nu_Vals.append(Nu)
+        logging.info("Ra= %i", Ra)
+        logging.info('Steady State Found. Iters = %i', iters)
+        logging.info("Nu= %f", Nu)
+        saveFile = filename +'Ra'+str(Ra)+'.npy'
+        steady.saveToFile(saveFile)
+        
         
         steady.phi.change_scales(1)
         steady.b.change_scales(1)
