@@ -361,17 +361,24 @@ class RBC_Problem:
             phiFromFile = np.load(l_File)
             dt = np.load(l_File)
         
-        self.u['g'] = uFromFile
-        self.v['g'] = vFromFile
-        self.b['g'] = bFromFile
-        self.phi['g'] = phiFromFile
+        # self.u['g'] = uFromFile
+        # self.v['g'] = vFromFile
+        # self.b['g'] = bFromFile
+        # self.phi['g'] = phiFromFile
+        self.u.load_from_global_grid_data(uFromFile)
+        self.v.load_from_global_grid_data(vFromFile)
+        self.b.load_from_global_grid_data(bFromFile)
+        self.phi.load_from_global_grid_data(phiFromFile)
         self.time_step = dt
+        
     
     def saveToFile(self,path=None):
         self.u.change_scales(1)
         self.v.change_scales(1)
         self.b.change_scales(1)
         self.phi.change_scales(1)
+        
+        
         
         if path == None:
             path = 'Outputs/' + self.bcs + '/Ra_' + str(self.Ra) + '/Pr_' + str(self.Pr)  +  '/' + 'alpha_' + str(self.alpha) + '/' + 'Nx_' + str(self.Nx) + '/' + 'Nz_' + str(self.Nz) + '/T_' + str(self.time) + '/'
@@ -387,10 +394,10 @@ class RBC_Problem:
             
         outputFile = path
         with open(outputFile,'wb') as outFile:
-            np.save(outFile,self.u['g'])
-            np.save(outFile,self.v['g'])
-            np.save(outFile,self.b['g'])
-            np.save(outFile,self.phi['g'])
+            np.save(outFile,self.u.allgather_data('g'))
+            np.save(outFile,self.v.allgather_data('g'))
+            np.save(outFile,self.b.allgather_data('g'))
+            np.save(outFile,self.phi.allgather_data('g'))
             np.save(outFile,self.time_step)
             
         
@@ -467,6 +474,7 @@ def Gt(X,T,problem):
     return Gt_Vec
 
 def jac_approx(X,dX,F,T,problem):
+    print(dX)
     mach_eps = np.finfo(float).eps
     normX = np.linalg.norm(X)
     normdX = np.linalg.norm(dX)
@@ -492,15 +500,15 @@ def steady_state_finder(problem,guess,T,tol,max_iters,write):
     X = guess
     while err > tol and iters < max_iters:
         if write == 'y':
-            #print("iter: ",iters)
-            #print(X)
-            #print("-------------")
-            pass
+            print("iter: ",iters)
+            print(X)
+            print("-------------")
 
         F = -1*Gt(X,T,problem)
         A = lambda dX : jac_approx(X,dX,F,T,problem)
         A_mat = LinearOperator((2*Nx*Nz,2*Nx*Nz),A)
         delta_X,code =gmres(A_mat,F,tol=1e-3)
+        print(delta_X)
         if code != 0:
             raise("gmres did not converge")
         X= X+delta_X
