@@ -206,10 +206,11 @@ class RBC_Problem:
         
         #if no initial conditions given, use a perturbed conduction state
         if self.init_u is None and self.init_v is None and self.init_b is None and self.bcs=='RB1':
-            #self.b.fill_random('g', seed=42, distribution='normal', scale=1e-3) # Random noise
-            #self.b['g'] *= (1+self.z) * (1 - self.z) # Damp noise at walls
-            # self.b['g'] += 0.01*np.cos((1/2)*np.pi*self.x)*np.sin(np.pi*self.z*self.alpha)
-            self.b['g'] += self.conduction_state() + np.cos(self.alpha*self.x)*np.cos(np.pi*self.z/2) # Add appropriate conduction state
+            self.b.fill_random('g', seed=42, distribution='normal', scale=1e-3) # Random noise
+            self.b['g'] *= (1+self.z) * (1 - self.z) # Damp noise at walls
+            #self.b['g'] += 0.01*np.cos((1/2)*np.pi*self.x)*np.sin(np.pi*self.z*self.alpha)
+            #self.b['g'] += self.conduction_state() + np.cos(self.alpha*self.x)*np.cos(np.pi*self.z/2) # Add appropriate conduction state
+            self.b['g'] += self.conduction_state()
             self.init_u = np.copy(self.u['g'])
             self.init_v = np.copy(self.v['g'])
             self.init_b = np.copy(self.b['g'])
@@ -739,10 +740,10 @@ def optimize_alpha():
 #iters1 = steady_state_finder(Pr7steady1,Pr7guess1,2,1e-2,50,False)
 #follow_branch()
 
-IH_test= RBC_Problem(1000,100,1.5585,256,128,'IH1')
-IH_test.initialize()
-IH_test.solve_system(30)
-IH_test.saveToFile('IH_time_stepping/Ra1000Pr100alpha1.5585Nx256Nz128.npy')
+# IH_test= RBC_Problem(1000,100,1.5585,256,128,'IH1')
+# IH_test.initialize()
+# IH_test.solve_system(30)
+# IH_test.saveToFile('IH_time_stepping/Ra1000Pr100alpha1.5585Nx256Nz128.npy')
         
         
     
