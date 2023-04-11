@@ -291,6 +291,7 @@ class RBC_Problem:
                         plt.colorbar()
                         plt.xlabel('x')
                         plt.ylabel('z')
+                        plt.axis('equal')
                         plt.title('t='+str(self.solver.sim_time))
                         image_name = 'animations/frame' + str(framecount).zfill(10) + '.jpg'
                         plt.savefig(image_name)
