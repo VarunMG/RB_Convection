@@ -476,7 +476,7 @@ def Gt(X,T,problem):
     return Gt_Vec
 
 def jac_approx(X,dX,F,T,problem):
-    print(dX)
+    #print(dX)
     mach_eps = np.finfo(float).eps
     normX = np.linalg.norm(X)
     normdX = np.linalg.norm(dX)
@@ -510,7 +510,7 @@ def steady_state_finder(problem,guess,T,tol,max_iters,write):
         A = lambda dX : jac_approx(X,dX,F,T,problem)
         A_mat = LinearOperator((2*Nx*Nz,2*Nx*Nz),A)
         delta_X,code =gmres(A_mat,F,tol=1e-3)
-        print(delta_X)
+        #print(delta_X)
         if code != 0:
             raise("gmres did not converge")
         X= X+delta_X
@@ -707,21 +707,27 @@ def follow_branch():
         
     
 def optimize_alpha():
-    Ra = 80000
+    Ra = 45000
+    Pr = 7
     Nx = 128
     Nz = 64
-    uArr,vArr,bArr, phiArr,dt = open_fields('RB1_steady_states/Pr100/primary_box/Ra80000.0Pr100alpha1.5585Nx128Nz64data.npy')
+    Arr,vArr,bArr, phiArr,dt = open_fields('RB1_steady_states/Pr7_remake/primary_box/Ra45000.0Pr7alpha1.5585Nx128Nz64data.npy')
     guess = arrsToStateVec(phiArr, bArr)
-    alpha_vals = np.linspace(2,10,17)
+    alpha_vals = np.linspace(0.5,10,20)
     steady_states = []
     Nu_Vals = []
+
+    file_path = 'optimization_outputs/Ra45000/Pr7/Ra'+ str(Ra)+'Pr'+str(Pr)+'alpha' 
     for alpha in alpha_vals:
-        steady = RBC_Problem(Ra,100,alpha,Nx,Nz,'RB1',time_step=dt)
+        steady = RBC_Problem(Ra,Pr,alpha,Nx,Nz,'RB1',time_step=dt)
         steady.initialize()
         iters = steady_state_finder(steady, guess, 2, 1e-7, 50, False)
         print('alpha= ', alpha)
         print("steady state found. Iters= ", iters)
         steady_states.append(steady)
+        file_name_end = str(alpha)+'Nx'+str(Nx)+'Nz'+str(Nz)+'.npy'
+        filename = file_path + file_name_end
+        steady.saveToFile(filename)
         Nu = steady.calc_Nu()
         Nu_Vals.append(Nu)
         
@@ -741,11 +747,30 @@ def optimize_alpha():
 #iters1 = steady_state_finder(Pr7steady1,Pr7guess1,2,1e-2,50,False)
 #follow_branch()
 
+#alpha_vals, Nu_Vals, steady_states = optimize_alpha()
+#print(alpha_vals)
+#print(Nu_Vals)
+
 # IH_test= RBC_Problem(1000,100,1.5585,256,128,'IH1')
 # IH_test.initialize()
 # IH_test.solve_system(30)
 # IH_test.saveToFile('IH_time_stepping/Ra1000Pr100alpha1.5585Nx256Nz128.npy')
-        
+
+
+alpha = 1.99945
+RBCLong = RBC_Problem(4000,100,alpha,256,128,'IH1')
+RBCLong.initialize()
+RBCLong.solve_system(20,True,False,True)
+#RBCLong.saveToFile('temp_outputs/IH1_Ra4000Pr7alpha0.3141Nx512Nz256_T50.npy')
+
+
+#tVals = RBCLong.tVals
+#NuVals = RBCLong.NuVals
+#file_name = 'temp_outputs/NuVals_IH1_Ra4000Pr7alpha0.3141Nx512Nz256_T50.npy'
+#with open(file_name,'wb') as outFile:
+#    np.save(outFile,NuVals)
+#    np.save(outFile,tVals)
+
         
     
     
